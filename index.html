@@ -1,0 +1,838 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>ESSENCIALY — Clínica de Optometria</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: { extend: {
+      colors: {
+        bg:'#111111', gold:'#C8A74E', goldSoft:'#E9D08A',
+        card:'#181818', border:'#252525', muted:'#8b8b8b'
+      },
+      fontFamily: { sans:['Inter','sans-serif'], serif:['"Playfair Display"','serif'] }
+    } }
+  }
+</script>
+<style>
+  html,body{background:#111;color:#f4f4f4;font-family:Inter,sans-serif}
+  .gold-gradient{background:linear-gradient(135deg,#C8A74E,#E9D08A,#C8A74E);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .luxury{background:linear-gradient(180deg,rgba(255,255,255,.02),rgba(200,167,78,.02));border:1px solid rgba(200,167,78,.15)}
+  .gold-glow{box-shadow:0 0 40px -12px rgba(200,167,78,.35)}
+  .btn-primary{background:#C8A74E;color:#111;font-weight:600}
+  .btn-primary:hover{background:#E9D08A}
+  .btn-outline{border:1px solid #C8A74E;color:#C8A74E}
+  .btn-outline:hover{background:rgba(200,167,78,.1)}
+  .input,.select,.textarea{background:#1f1f1f;border:1px solid #2a2a2a;border-radius:8px;padding:8px 10px;color:#f4f4f4;width:100%;font-size:14px}
+  .input:focus,.select:focus,.textarea:focus{outline:none;border-color:#C8A74E}
+  .label{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#8b8b8b}
+  .tab{padding:6px 14px;font-size:13px;border-radius:8px;cursor:pointer;color:#8b8b8b}
+  .tab.active{background:rgba(200,167,78,.15);color:#C8A74E;border:1px solid rgba(200,167,78,.3)}
+  .toggle{border:1px solid #252525;background:rgba(31,31,31,.6);border-radius:10px;padding:10px 12px;cursor:pointer;font-size:13px;color:#8b8b8b;display:flex;justify-content:space-between;align-items:center}
+  .toggle.on{border-color:#C8A74E;background:rgba(200,167,78,.1);color:#C8A74E}
+  .dot{width:14px;height:14px;border-radius:99px;border:1px solid #252525}
+  .toggle.on .dot{background:#C8A74E;border-color:#C8A74E}
+  .badge{display:inline-block;padding:2px 8px;border-radius:6px;font-size:10px;letter-spacing:.1em;text-transform:uppercase;border:1px solid}
+  .b-amber{background:rgba(245,158,11,.12);color:#fbbf24;border-color:rgba(245,158,11,.3)}
+  .b-emerald{background:rgba(16,185,129,.12);color:#6ee7b7;border-color:rgba(16,185,129,.3)}
+  .b-blue{background:rgba(59,130,246,.12);color:#93c5fd;border-color:rgba(59,130,246,.3)}
+  .b-gold{background:rgba(200,167,78,.12);color:#C8A74E;border-color:rgba(200,167,78,.35)}
+  .b-red{background:rgba(239,68,68,.12);color:#fca5a5;border-color:rgba(239,68,68,.3)}
+  .b-green{background:rgba(16,185,129,.12);color:#6ee7b7;border-color:rgba(16,185,129,.3)}
+  .side-btn{width:100%;text-align:left;padding:10px 12px;border-radius:8px;font-size:14px;color:#8b8b8b;display:flex;align-items:center;gap:10px}
+  .side-btn:hover{background:rgba(255,255,255,.03);color:#f4f4f4}
+  .side-btn.active{background:rgba(200,167,78,.1);color:#C8A74E;border:1px solid rgba(200,167,78,.3)}
+  table.tbl{width:100%;border-collapse:collapse;font-size:14px}
+  .tbl th{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#8b8b8b;text-align:left;padding:10px;border-bottom:1px solid #252525}
+  .tbl td{padding:10px;border-bottom:1px solid rgba(37,37,37,.6)}
+  .tbl tr:hover td{background:rgba(255,255,255,.02)}
+  .toast{position:fixed;top:20px;right:20px;padding:12px 16px;border-radius:10px;background:#181818;border:1px solid rgba(200,167,78,.4);color:#f4f4f4;z-index:99;font-size:14px;box-shadow:0 8px 30px rgba(0,0,0,.5)}
+  .toast.err{border-color:rgba(239,68,68,.5)}
+  .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;z-index:50;padding:20px}
+  .scroll{scrollbar-width:thin;scrollbar-color:rgba(200,167,78,.3) transparent}
+  .scroll::-webkit-scrollbar{width:6px}
+  .scroll::-webkit-scrollbar-thumb{background:rgba(200,167,78,.3);border-radius:3px}
+  input[type=date]::-webkit-calendar-picker-indicator{filter:invert(1) opacity(.5)}
+  @media print { .no-print{display:none} }
+</style>
+</head>
+<body class="min-h-screen">
+
+<div id="app"></div>
+
+<script>
+/* ===============================================================
+   ESSENCIALY — CRM standalone com backend em Google Sheets
+   =============================================================== */
+
+const STATUS_META = {
+  AGUARDANDO_TRIAGEM:{label:'Aguardando Triagem',cls:'b-amber'},
+  EM_ATENDIMENTO:{label:'Em Atendimento',cls:'b-blue'},
+  FINALIZADO:{label:'Finalizado',cls:'b-emerald'},
+  RETORNO_AGENDADO:{label:'Retorno Agendado',cls:'b-blue'},
+};
+const ROLES = {
+  ADMIN:{label:'Administrador'},
+  RECEPCAO:{label:'Recepção'},
+  OPTOMETRISTA:{label:'Optometrista'},
+};
+
+const state = {
+  user: null,           // {id, username, nome, role}
+  token: '',            // auth token from Apps Script
+  apiUrl: '',           // Apps Script Web App URL
+  view: 'dashboard',
+  patients: [],
+  loading: false,
+  selectedPatientId: null,
+  detailPatientId: null,
+  triagemForm: null,
+  triagemTab: 'dados',
+  searchQ: '',
+  consultForm: null,
+  authTab: 'login',     // 'login' | 'signup'
+};
+
+/* ---------- Persistence helpers ---------- */
+function saveLocal(){
+  localStorage.setItem('ess_user', JSON.stringify(state.user||null));
+  localStorage.setItem('ess_token', state.token||'');
+  localStorage.setItem('ess_api', state.apiUrl||'');
+}
+function loadLocal(){
+  try { state.user = JSON.parse(localStorage.getItem('ess_user')||'null'); } catch { state.user=null }
+  state.token = localStorage.getItem('ess_token')||'';
+  state.apiUrl = localStorage.getItem('ess_api')||'';
+}
+
+/* ---------- Password hashing (SHA-256 hex) ---------- */
+async function hashPassword(pw){
+  const enc = new TextEncoder().encode('essenciary:'+pw);
+  const buf = await crypto.subtle.digest('SHA-256', enc);
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+
+/* ---------- API (Google Apps Script) ---------- */
+async function apiGetPatients(){
+  if(!state.apiUrl) return [];
+  const r = await fetch(state.apiUrl + '?token=' + encodeURIComponent(state.token), { method:'GET' });
+  const j = await r.json();
+  if(!j.ok){ if(j.error==='auth'){ handleAuthExpired(); } throw new Error(j.error||'Erro ao buscar'); }
+  return (j.patients||[]).map(normalizeFromSheet);
+}
+async function apiPost(payload){
+  if(!state.apiUrl) throw new Error('URL da planilha não configurada');
+  const r = await fetch(state.apiUrl, {
+    method:'POST',
+    headers:{'Content-Type':'text/plain;charset=utf-8'},
+    body: JSON.stringify(payload)
+  });
+  return await r.json();
+}
+async function apiUpsertPatient(patient){
+  const j = await apiPost({ action:'upsert', token: state.token, patient });
+  if(!j.ok){ if(j.error==='auth') handleAuthExpired(); throw new Error(j.error||'Erro ao salvar'); }
+  return j.patient;
+}
+async function apiRegister(user){
+  const j = await apiPost({ action:'register', user });
+  if(!j.ok) throw new Error(j.error||'Erro no cadastro');
+  return j;
+}
+async function apiLogin(username, passwordHash){
+  const j = await apiPost({ action:'login', username, passwordHash });
+  if(!j.ok) throw new Error(j.error||'Falha ao entrar');
+  return j;
+}
+function handleAuthExpired(){
+  state.user = null; state.token = ''; saveLocal();
+  toast('Sessão expirada — faça login novamente', true);
+  render();
+}
+
+/* Fields that are booleans in UI, "SIM"/"" in the sheet */
+const BOOL_FIELDS = ['dorDeCabeca','avPerto','avLonge','tontura','dorOcular','fotofobia',
+  'diabetes','hipertensao','labirintite','glaucoma','pterigio','cirurgiaNosOlhos',
+  'diabetesFamilia','hipertensaoFamilia','glaucomaFamilia'];
+
+function normalizeFromSheet(p){
+  const o = {...p};
+  BOOL_FIELDS.forEach(k => { o[k] = (p[k]===true || String(p[k]||'').toUpperCase()==='SIM'); });
+  return o;
+}
+
+/* ---------- Utility ---------- */
+function calcAge(iso){ if(!iso) return ''; const d=new Date(iso); if(isNaN(d)) return ''; const t=new Date(); let a=t.getFullYear()-d.getFullYear(); const m=t.getMonth()-d.getMonth(); if(m<0||(m===0&&t.getDate()<d.getDate())) a--; return a>=0&&a<130?String(a):''; }
+function uuid(){ return 'p-' + Math.random().toString(36).slice(2) + Date.now().toString(36); }
+function toast(msg, err=false){
+  const el = document.createElement('div');
+  el.className = 'toast ' + (err?'err':'');
+  el.textContent = msg;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 3200);
+}
+function esc(s){ return String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]); }
+function diffN(a,b){ const na=parseFloat(a), nb=parseFloat(b); if(isNaN(na)||isNaN(nb)) return null; return +(na-nb).toFixed(2); }
+
+function emptyPatient(){ return {
+  id:'', nome:'', dataCadastro:'', cpf:'', rg:'', dataNascimento:'', idade:'', endereco:'', cidade:'', telefone:'', observacao:'', status:'AGUARDANDO_TRIAGEM',
+  dorDeCabeca:false,avPerto:false,avLonge:false,tontura:false,dorOcular:false,fotofobia:false,
+  diabetes:false,hipertensao:false,labirintite:false,glaucoma:false,pterigio:false,cirurgiaNosOlhos:false,
+  diabetesFamilia:false,hipertensaoFamilia:false,glaucomaFamilia:false,
+  esfOdAnt:'',cilOdAnt:'',eixOdAnt:'',esfOeAnt:'',cilOeAnt:'',eixOeAnt:'',addAnt:'',
+  esfAtualOd:'',cilAtualOd:'',eixAtualOd:'',esfAtualOe:'',cilAtualOe:'',eixAtualOe:'',addAtual:'',
+  acuidadeLongeOd:'',acuidadePertoOd:'',acuidadeLongeOe:'',acuidadePertoOe:'',
+  biocromoVerde:'',biocromoVermelho:''
+}; }
+
+async function reloadPatients(){
+  try {
+    state.loading = true; render();
+    state.patients = await apiGetPatients();
+  } catch(e){ toast('Erro: '+e.message, true); }
+  finally { state.loading = false; render(); }
+}
+
+/* =====================================================================
+   RENDER
+   ===================================================================== */
+function render(){
+  const root = document.getElementById('app');
+  if(!state.apiUrl){ root.innerHTML = viewSetup(); attachSetupEvents(); return; }
+  if(!state.user || !state.token){ root.innerHTML = viewLogin(); attachLoginEvents(); return; }
+  root.innerHTML = viewShell();
+  attachShellEvents();
+}
+
+function attachSetupEvents(){
+  const btn = document.getElementById('save-api');
+  if(btn) btn.onclick = () => {
+    const v = document.getElementById('api-url').value.trim();
+    if(!v || !v.includes('/exec')){ toast('URL inválida — precisa terminar em /exec', true); return; }
+    state.apiUrl = v; saveLocal(); toast('Planilha conectada!'); render();
+  };
+}
+
+/* ---------- Setup (first-time API URL) ---------- */
+function viewSetup(){
+  return `
+  <div class="min-h-screen grid place-items-center p-6" style="background:radial-gradient(circle at 20% 30%,rgba(200,167,78,.15),transparent 50%),radial-gradient(circle at 80% 70%,rgba(200,167,78,.08),transparent 40%),#111">
+    <div class="w-full max-w-lg luxury rounded-2xl p-8 gold-glow">
+      <div class="flex items-center gap-3 mb-6">
+        <div class="h-10 w-10 rounded-lg grid place-items-center border border-gold" style="background:linear-gradient(135deg,#1a1a1a,#0a0a0a)">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#C8A74E" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
+        </div>
+        <div>
+          <div class="font-serif text-lg gold-gradient tracking-[.25em]">ESSENCIALY</div>
+          <div class="text-[10px] uppercase tracking-[.2em] text-muted">Optometria</div>
+        </div>
+      </div>
+      <h1 class="font-serif text-2xl gold-gradient mb-1">Conectar Google Planilha</h1>
+      <p class="text-sm text-muted mb-5">Cole aqui a URL do <b>Google Apps Script Web App</b> que você implantou (termina com <code>/exec</code>). Ele criará automaticamente as abas <b>Pacientes</b> e <b>Usuarios</b>.</p>
+      <label class="label">URL do Web App</label>
+      <input id="api-url" class="input mb-4" placeholder="https://script.google.com/macros/s/AKfy.../exec" />
+      <button id="save-api" class="btn-primary w-full py-2.5 rounded-lg">Conectar</button>
+      <div class="text-xs text-muted mt-4 leading-relaxed">
+        <b class="text-gold">Como obter:</b> abra sua planilha Google → Extensões → Apps Script → cole o código <b>apps-script.gs</b> → Implantar → Novo → App da Web → Acesso: "Qualquer pessoa" → Copie a URL.
+      </div>
+    </div>
+  </div>`;
+}
+
+/* ---------- Login / Cadastro ---------- */
+function viewLogin(){
+  const isSignup = state.authTab === 'signup';
+  return `
+  <div class="min-h-screen grid place-items-center p-6" style="background:radial-gradient(circle at 20% 30%,rgba(200,167,78,.25),transparent 50%),radial-gradient(circle at 80% 70%,rgba(200,167,78,.15),transparent 40%),#111">
+    <div class="w-full max-w-md luxury rounded-2xl p-8 gold-glow">
+      <div class="text-center mb-6">
+        <div class="inline-flex items-center gap-3">
+          <div class="h-10 w-10 rounded-lg grid place-items-center border border-gold" style="background:linear-gradient(135deg,#1a1a1a,#0a0a0a)">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#C8A74E" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
+          </div>
+          <div class="text-left">
+            <div class="font-serif text-lg gold-gradient tracking-[.25em]">ESSENCIALY</div>
+            <div class="text-[10px] uppercase tracking-[.2em] text-muted">Optometria</div>
+          </div>
+        </div>
+        <h1 class="font-serif text-2xl gold-gradient mt-4">${isSignup?'Criar conta':'Bem-vindo(a)'}</h1>
+        <p class="text-sm text-muted">${isSignup?'Cadastre seu usuário na clínica':'Acesse sua estação de trabalho'}</p>
+      </div>
+
+      <div class="flex gap-2 mb-5 bg-black/30 rounded-lg p-1">
+        <button data-authtab="login"  class="flex-1 tab ${!isSignup?'active':''}">Login</button>
+        <button data-authtab="signup" class="flex-1 tab ${isSignup?'active':''}">Cadastrar</button>
+      </div>
+
+      ${isSignup ? `
+        <label class="label">Nome completo</label>
+        <input id="su-nome" class="input mb-3" placeholder="Ex: Dra. Marina Silva" />
+        <label class="label">Nome de usuário</label>
+        <input id="su-user" class="input mb-3" placeholder="ex: marina.silva" autocapitalize="off" />
+        <label class="label">Perfil</label>
+        <select id="su-role" class="select mb-3">
+          <option value="RECEPCAO">Recepção</option>
+          <option value="OPTOMETRISTA">Optometrista</option>
+          <option value="ADMIN">Administrador</option>
+        </select>
+        <label class="label">Senha</label>
+        <input id="su-pass" type="password" class="input mb-4" placeholder="Mínimo 4 caracteres" />
+        <button id="btn-signup" class="btn-primary w-full py-2.5 rounded-lg">Criar conta</button>
+        <p class="text-[11px] text-center text-muted mt-3">O <b>primeiro usuário</b> cadastrado vira Administrador automaticamente.</p>
+      ` : `
+        <label class="label">Nome de usuário</label>
+        <input id="li-user" class="input mb-3" placeholder="seu.usuario" autocapitalize="off" />
+        <label class="label">Senha</label>
+        <input id="li-pass" type="password" class="input mb-4" placeholder="••••••••" />
+        <button id="btn-login" class="btn-primary w-full py-2.5 rounded-lg">Entrar</button>
+      `}
+      <div class="text-[11px] text-center text-muted mt-4">Dados salvos na sua planilha Google</div>
+      <button id="reset-api" class="text-[11px] text-muted underline block mx-auto mt-3">Trocar planilha conectada</button>
+    </div>
+  </div>`;
+}
+
+function attachLoginEvents(){
+  document.querySelectorAll('[data-authtab]').forEach(b => b.onclick = () => { state.authTab = b.dataset.authtab; render(); });
+
+  const login = document.getElementById('btn-login');
+  if(login) login.onclick = async () => {
+    const username = (document.getElementById('li-user').value||'').trim().toLowerCase();
+    const pass = document.getElementById('li-pass').value||'';
+    if(!username || !pass){ toast('Preencha usuário e senha', true); return; }
+    login.disabled = true; login.textContent = 'Entrando...';
+    try {
+      const hash = await hashPassword(pass);
+      const j = await apiLogin(username, hash);
+      state.user = j.user; state.token = j.token; saveLocal();
+      toast('Bem-vindo(a), '+j.user.nome+'!');
+      await reloadPatients(); render();
+    } catch(err){ toast('Erro: '+err.message, true); login.disabled=false; login.textContent='Entrar'; }
+  };
+
+  const signup = document.getElementById('btn-signup');
+  if(signup) signup.onclick = async () => {
+    const nome = (document.getElementById('su-nome').value||'').trim();
+    const username = (document.getElementById('su-user').value||'').trim().toLowerCase();
+    const role = document.getElementById('su-role').value;
+    const pass = document.getElementById('su-pass').value||'';
+    if(!nome || !username || !pass){ toast('Preencha todos os campos', true); return; }
+    if(pass.length < 4){ toast('Senha muito curta (mín. 4)', true); return; }
+    if(!/^[a-z0-9._-]{3,}$/i.test(username)){ toast('Usuário: letras, números, . _ -', true); return; }
+    signup.disabled = true; signup.textContent = 'Criando...';
+    try {
+      const passwordHash = await hashPassword(pass);
+      const j = await apiRegister({ nome, username, role, passwordHash });
+      state.user = j.user; state.token = j.token; saveLocal();
+      toast(j.firstAdmin ? 'Conta criada — você é o Administrador!' : 'Conta criada com sucesso!');
+      await reloadPatients(); render();
+    } catch(err){ toast('Erro: '+err.message, true); signup.disabled=false; signup.textContent='Criar conta'; }
+  };
+
+  const rst = document.getElementById('reset-api');
+  if(rst) rst.onclick = () => { state.apiUrl=''; saveLocal(); render(); };
+}
+
+/* ---------- Shell (sidebar + topbar + view) ---------- */
+function viewShell(){
+  return `
+  <div class="flex min-h-screen">
+    ${sidebar()}
+    <div class="flex-1 flex flex-col min-w-0">
+      ${topbar()}
+      <main class="flex-1 overflow-auto scroll">${currentView()}</main>
+    </div>
+  </div>`;
+}
+
+function sidebar(){
+  const items = [
+    ['dashboard','Dashboard','📊'],
+    ['triagem','Triagem','📋'],
+    ['pacientes','Pacientes','👥'],
+    ['consulta','Consulta','🩺'],
+  ];
+  return `
+  <aside class="w-[240px] shrink-0 border-r border-border bg-card flex flex-col">
+    <div class="h-16 flex items-center px-4 border-b border-border gap-3">
+      <div class="h-9 w-9 rounded-lg grid place-items-center border border-gold" style="background:linear-gradient(135deg,#1a1a1a,#0a0a0a)">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#C8A74E" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
+      </div>
+      <div>
+        <div class="font-serif text-sm gold-gradient tracking-[.25em]">ESSENCIALY</div>
+        <div class="text-[9px] uppercase tracking-[.2em] text-muted">Optometria</div>
+      </div>
+    </div>
+    <nav class="p-3 flex-1 space-y-1">
+      ${items.map(([k,l,i]) => `<button data-view="${k}" class="side-btn ${state.view===k?'active':''}"><span>${i}</span><span>${l}</span></button>`).join('')}
+    </nav>
+    <div class="p-3 border-t border-border">
+      <div class="rounded-lg bg-black/30 p-2 mb-2">
+        <div class="text-[10px] uppercase tracking-widest text-muted">Conectado como</div>
+        <div class="text-sm font-medium truncate">${esc(state.user.nome)}</div>
+        <div class="text-[10px] uppercase tracking-widest text-gold">@${esc(state.user.username)} · ${ROLES[state.user.role]?.label||''}</div>
+      </div>
+      <button id="btn-logout" class="side-btn"><span>⏻</span><span>Sair</span></button>
+    </div>
+  </aside>`;
+}
+
+function topbar(){
+  return `
+  <header class="h-16 border-b border-border bg-card/60 px-6 flex items-center gap-4">
+    <div class="flex-1 max-w-xl">
+      <input id="search" placeholder="🔍  Buscar por nome, CPF, telefone, cidade..." class="input" value="${esc(state.searchQ)}" />
+    </div>
+    <button id="btn-new-triagem" class="btn-primary px-4 py-2 rounded-lg text-sm">＋ Nova Triagem</button>
+    <button id="btn-reload" class="btn-outline px-3 py-2 rounded-lg text-sm" title="Recarregar da planilha">↻</button>
+  </header>`;
+}
+
+function currentView(){
+  switch(state.view){
+    case 'dashboard': return viewDashboard();
+    case 'triagem': return viewTriagem();
+    case 'pacientes': return viewPacientes();
+    case 'consulta': return viewConsulta();
+    default: return viewDashboard();
+  }
+}
+
+function attachShellEvents(){
+  document.querySelectorAll('[data-view]').forEach(b => b.onclick = () => { state.view = b.dataset.view; render(); });
+  const s = document.getElementById('search'); if(s) s.oninput = e => { state.searchQ = e.target.value; if(state.view!=='pacientes') state.view='pacientes'; render(); document.getElementById('search').focus(); };
+  const nt = document.getElementById('btn-new-triagem'); if(nt) nt.onclick = () => { state.triagemForm=emptyPatient(); state.triagemTab='dados'; state.view='triagem'; render(); };
+  const rl = document.getElementById('btn-reload'); if(rl) rl.onclick = reloadPatients;
+  const lo = document.getElementById('btn-logout'); if(lo) lo.onclick = () => { state.user=null; state.token=''; saveLocal(); render(); };
+  attachViewEvents();
+}
+
+/* ---------- Dashboard ---------- */
+function viewDashboard(){
+  const today = new Date().toISOString().slice(0,10);
+  const total = state.patients.length;
+  const novos = state.patients.filter(p => (String(p.dataCadastro||'').slice(0,10) === today)).length;
+  const aguardando = state.patients.filter(p => ['AGUARDANDO_TRIAGEM','EM_ATENDIMENTO'].includes(p.status)).length;
+  const finalizados = state.patients.filter(p => p.status==='FINALIZADO').length;
+  const receitas = state.patients.filter(p => p.esfAtualOd || p.esfAtualOe).length;
+  const latest = [...state.patients].sort((a,b)=> String(b.dataCadastro||'').localeCompare(String(a.dataCadastro||''))).slice(0,6);
+
+  const stat = (l,v,h) => `
+    <div class="luxury rounded-xl p-5">
+      <div class="label">${l}</div>
+      <div class="font-serif text-4xl mt-1 gold-gradient">${v}</div>
+      <div class="text-xs text-muted mt-2">${h||''}</div>
+    </div>`;
+
+  return `
+  <div class="p-6 space-y-6">
+    <div>
+      <div class="label">Bem-vindo(a)</div>
+      <h1 class="font-serif text-4xl">Painel <span class="gold-gradient">ESSENCIALY</span></h1>
+      <p class="text-sm text-muted mt-1">Visão geral da clínica — dados em tempo real da sua planilha Google.</p>
+    </div>
+    <div class="grid grid-cols-2 lg:grid-cols-5 gap-4">
+      ${stat('Pacientes Hoje', novos, 'Novos cadastros')}
+      ${stat('Aguardando', aguardando, 'Fila da clínica')}
+      ${stat('Finalizados', finalizados, 'Consultas concluídas')}
+      ${stat('Receitas', receitas, 'Emitidas')}
+      ${stat('Total Pacientes', total, 'Base ativa')}
+    </div>
+    <div class="luxury rounded-xl p-5">
+      <h2 class="font-serif text-xl mb-3">Últimos pacientes</h2>
+      ${latest.length===0
+        ? `<div class="text-center py-8">
+             <p class="text-muted text-sm">Nenhum paciente ainda.</p>
+             <button id="dash-new" class="btn-primary px-4 py-2 rounded-lg text-sm mt-3">＋ Criar primeira triagem</button>
+           </div>`
+        : `<div class="space-y-2">${latest.map(p => `
+            <button data-open-patient="${p.id}" class="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-white/5 text-left">
+              <div class="h-9 w-9 rounded-full bg-gold/10 border border-gold grid place-items-center text-gold text-sm font-medium">${esc((p.nome||'?').slice(0,1).toUpperCase())}</div>
+              <div class="flex-1 min-w-0"><div class="text-sm">${esc(p.nome)}</div><div class="text-xs text-muted">${esc(p.telefone||p.cpf||'—')}</div></div>
+              <span class="badge ${STATUS_META[p.status]?.cls||'b-gold'}">${STATUS_META[p.status]?.label||p.status||'—'}</span>
+            </button>`).join('')}
+          </div>`}
+    </div>
+    ${state.loading?'<div class="text-center text-sm text-muted">Sincronizando com a planilha…</div>':''}
+  </div>`;
+}
+
+/* ---------- Triagem (form) ---------- */
+function viewTriagem(){
+  if(!state.triagemForm) state.triagemForm = emptyPatient();
+  const f = state.triagemForm;
+  const idade = calcAge(f.dataNascimento);
+  f.idade = idade;
+
+  const tabs = [
+    ['dados','Dados'],['sintomas','Anamnese'],['saude','Histórico Saúde'],['familia','Histórico Familiar']
+  ];
+  const SINT = [['dorDeCabeca','Dor de cabeça'],['avPerto','AV Perto'],['avLonge','AV Longe'],['tontura','Tontura'],['dorOcular','Dor Ocular'],['fotofobia','Fotofobia']];
+  const SAUDE = [['diabetes','Diabetes'],['hipertensao','Hipertensão'],['labirintite','Labirintite'],['glaucoma','Glaucoma'],['pterigio','Pterígio'],['cirurgiaNosOlhos','Cirurgia nos olhos']];
+  const FAM = [['diabetesFamilia','Diabetes na família'],['hipertensaoFamilia','Hipertensão na família'],['glaucomaFamilia','Glaucoma na família']];
+
+  const toggles = arr => arr.map(([k,l]) => `<button type="button" data-toggle="${k}" class="toggle ${f[k]?'on':''}"><span>${l}</span><span class="dot"></span></button>`).join('');
+
+  const fld = (l,k,type='text',ro=false,placeholder='') =>
+    `<div><div class="label mb-1">${l}</div><input class="input" data-field="${k}" type="${type}" ${ro?'readonly':''} placeholder="${esc(placeholder)}" value="${esc(f[k]||'')}"></div>`;
+
+  const content = {
+    dados: `
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="md:col-span-2">${fld('Nome *','nome','text',false,'Ex: Ana Beatriz Souza')}</div>
+        <div><div class="label mb-1">Data de Cadastro</div><input class="input" readonly value="${new Date().toLocaleDateString('pt-BR')}"></div>
+        ${fld('CPF','cpf','text',false,'000.000.000-00')}
+        ${fld('RG','rg')}
+        ${fld('Data de Nascimento','dataNascimento','date')}
+        <div><div class="label mb-1">Idade</div><input class="input" readonly value="${idade}"></div>
+        ${fld('Telefone','telefone')}
+        ${fld('Cidade','cidade')}
+        <div class="md:col-span-3">${fld('Endereço','endereco')}</div>
+        <div class="md:col-span-3"><div class="label mb-1">Observação</div><textarea class="textarea" data-field="observacao" rows="3">${esc(f.observacao||'')}</textarea></div>
+      </div>`,
+    sintomas: `<div class="grid grid-cols-2 md:grid-cols-3 gap-3">${toggles(SINT)}</div>`,
+    saude: `<div class="grid grid-cols-2 md:grid-cols-3 gap-3">${toggles(SAUDE)}</div>`,
+    familia: `<div class="grid grid-cols-2 md:grid-cols-3 gap-3">${toggles(FAM)}</div>`,
+  }[state.triagemTab];
+
+  return `
+  <form id="triagem-form" class="p-6 space-y-6 max-w-6xl">
+    <div>
+      <div class="label">Recepção</div>
+      <h1 class="font-serif text-4xl">Triagem <span class="gold-gradient">Rápida</span></h1>
+      <p class="text-sm text-muted mt-1">Ficha completa do paciente — dados, sintomas e histórico salvos na planilha Google.</p>
+    </div>
+    <div class="flex gap-2 flex-wrap">
+      ${tabs.map(([k,l])=>`<button type="button" data-tab="${k}" class="tab ${state.triagemTab===k?'active':''}">${l}</button>`).join('')}
+    </div>
+    <div class="luxury rounded-xl p-6">${content}</div>
+    <div class="flex justify-end">
+      <button type="submit" class="btn-primary px-5 py-2.5 rounded-lg">✓ Registrar Paciente</button>
+    </div>
+  </form>`;
+}
+
+/* ---------- Pacientes list ---------- */
+function viewPacientes(){
+  const q = (state.searchQ||'').toLowerCase();
+  const list = state.patients.filter(p => !q || [p.nome,p.cpf,p.telefone,p.cidade].some(x => String(x||'').toLowerCase().includes(q)));
+  return `
+  <div class="p-6">
+    <div class="mb-6"><div class="label">Base</div><h1 class="font-serif text-4xl">Pacientes</h1>
+      <p class="text-sm text-muted">${list.length} registro(s) ${state.loading?'· sincronizando…':''}</p>
+    </div>
+    <div class="luxury rounded-xl overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="tbl">
+          <thead><tr><th>Paciente</th><th>Contato</th><th>Cidade</th><th>Idade</th><th>Status</th><th class="text-right">Ações</th></tr></thead>
+          <tbody>
+          ${list.length===0
+            ? `<tr><td colspan="6" class="text-center py-8 text-muted">Nenhum paciente encontrado.</td></tr>`
+            : list.map(p => `
+              <tr>
+                <td><div class="flex items-center gap-3">
+                  <div class="h-9 w-9 rounded-full bg-gold/10 border border-gold grid place-items-center text-gold text-sm font-medium">${esc((p.nome||'?').slice(0,1).toUpperCase())}</div>
+                  <div><div class="font-medium">${esc(p.nome)}</div><div class="text-xs text-muted">${esc(p.cpf||'—')}</div></div>
+                </div></td>
+                <td>${esc(p.telefone||'—')}</td>
+                <td>${esc(p.cidade||'—')}</td>
+                <td>${esc(p.idade||'—')}</td>
+                <td><span class="badge ${STATUS_META[p.status]?.cls||'b-gold'}">${STATUS_META[p.status]?.label||p.status||'—'}</span></td>
+                <td class="text-right">
+                  <button data-open-patient="${p.id}" class="px-2 py-1 rounded hover:bg-white/5 text-sm">Abrir</button>
+                  <button data-consult-patient="${p.id}" class="btn-primary px-3 py-1 rounded ml-2 text-sm">Consulta →</button>
+                </td>
+              </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  ${state.detailPatientId ? modalPatientDetail() : ''}`;
+}
+
+/* ---------- Consulta ---------- */
+function viewConsulta(){
+  if(!state.selectedPatientId){
+    return `<div class="p-10 text-center">
+      <p class="text-muted">Selecione um paciente para iniciar a consulta.</p>
+      <button id="go-pacientes" class="btn-primary px-4 py-2 rounded-lg text-sm mt-4">Ir para Pacientes</button>
+    </div>`;
+  }
+  // load from state.consultForm (or seed from patient list)
+  if(!state.consultForm || state.consultForm.id !== state.selectedPatientId){
+    const orig = state.patients.find(p => p.id===state.selectedPatientId);
+    state.consultForm = { ...orig };
+    state.consultForm._original = { ...orig }; // snapshot for auto-shift check
+  }
+  const p = state.consultForm;
+
+  const rxRow = (label, kAnt, kAtual) => {
+    const ant = p[kAnt]||''; const atu = p[kAtual]||''; const d = diffN(atu, ant);
+    const changed = ant && atu && String(ant)!==String(atu);
+    const dBadge = d!==null && d!==0
+      ? `<span class="badge ${d>0?'b-green':'b-red'}">${d>0?'+':''}${d}</span>`
+      : (changed ? `<span class="badge b-gold">alterado</span>` : `<span class="text-muted text-sm">—</span>`);
+    return `<tr${changed?' style="background:rgba(200,167,78,.05)"':''}>
+      <td class="text-muted">${label}</td>
+      <td><input class="input" style="height:32px" data-field="${kAnt}" readonly value="${esc(ant)}"></td>
+      <td><input class="input" style="height:32px" data-field="${kAtual}" value="${esc(atu)}"></td>
+      <td>${dBadge}</td>
+    </tr>`;
+  };
+  const fInput = (l,k,ph='') => `<div><div class="label mb-1">${l}</div><input class="input" data-field="${k}" value="${esc(p[k]||'')}" placeholder="${esc(ph)}"></div>`;
+
+  return `
+  <div class="p-6 space-y-6">
+    <div class="flex items-start justify-between gap-4 flex-wrap">
+      <div>
+        <button id="back-pacientes" class="label hover:text-gold">← Voltar</button>
+        <h1 class="font-serif text-4xl mt-1">Consulta — <span class="gold-gradient">${esc(p.nome)}</span></h1>
+        <p class="text-sm text-muted">${p.idade?p.idade+' anos':''} ${p.telefone?'· '+esc(p.telefone):''} ${p.cidade?'· '+esc(p.cidade):''}</p>
+      </div>
+      <div class="flex gap-2">
+        <button id="btn-print" class="btn-outline px-4 py-2 rounded-lg text-sm">🖨 Imprimir Receita</button>
+        <button id="btn-save-consulta" class="btn-primary px-4 py-2 rounded-lg text-sm">💾 Salvar Consulta</button>
+      </div>
+    </div>
+
+    <div class="luxury rounded-xl p-6">
+      <h2 class="font-serif text-xl mb-3">Acuidade Visual</h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+          <div class="label text-gold mb-2">Olho Direito (OD)</div>
+          <div class="grid grid-cols-2 gap-3">
+            ${fInput('Acuidade Longe OD','acuidadeLongeOd','20/20')}
+            ${fInput('Acuidade Perto OD','acuidadePertoOd','J1')}
+          </div>
+        </div>
+        <div>
+          <div class="label text-gold mb-2">Olho Esquerdo (OE)</div>
+          <div class="grid grid-cols-2 gap-3">
+            ${fInput('Acuidade Longe OE','acuidadeLongeOe','20/20')}
+            ${fInput('Acuidade Perto OE','acuidadePertoOe','J1')}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="luxury rounded-xl p-6">
+      <h2 class="font-serif text-xl mb-3">Teste Bicromático</h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        ${fInput('Biocromo Verde','biocromoVerde')}
+        ${fInput('Biocromo Vermelho','biocromoVermelho')}
+      </div>
+    </div>
+
+    <div class="luxury rounded-xl p-6 gold-glow">
+      <div class="flex items-center gap-2 mb-1"><span class="text-gold">✦</span><h2 class="font-serif text-xl">Refração — Anterior × Atual</h2></div>
+      <p class="text-xs text-muted mb-4">Ao salvar, a refração atual vira automaticamente a "anterior" na próxima consulta.</p>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="rounded-lg border border-border p-4">
+          <div class="label text-gold mb-3">Olho Direito (OD)</div>
+          <table class="tbl"><thead><tr><th></th><th>Anterior</th><th>Atual</th><th>Δ</th></tr></thead>
+            <tbody>
+              ${rxRow('Esférico','esfOdAnt','esfAtualOd')}
+              ${rxRow('Cilindro','cilOdAnt','cilAtualOd')}
+              ${rxRow('Eixo','eixOdAnt','eixAtualOd')}
+            </tbody></table>
+        </div>
+        <div class="rounded-lg border border-border p-4">
+          <div class="label text-gold mb-3">Olho Esquerdo (OE)</div>
+          <table class="tbl"><thead><tr><th></th><th>Anterior</th><th>Atual</th><th>Δ</th></tr></thead>
+            <tbody>
+              ${rxRow('Esférico','esfOeAnt','esfAtualOe')}
+              ${rxRow('Cilindro','cilOeAnt','cilAtualOe')}
+              ${rxRow('Eixo','eixOeAnt','eixAtualOe')}
+            </tbody></table>
+        </div>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+        <div><div class="label mb-1">Adição Anterior</div><input class="input" data-field="addAnt" readonly value="${esc(p.addAnt||'')}"></div>
+        <div><div class="label mb-1">Adição Atual</div><input class="input" data-field="addAtual" value="${esc(p.addAtual||'')}" placeholder="+0.00"></div>
+        <div class="flex items-end">${(() => { const d=diffN(p.addAtual,p.addAnt); return d!==null&&d!==0?`<span class="badge ${d>0?'b-green':'b-red'}">Δ Adição: ${d>0?'+':''}${d}</span>`:'';})()}</div>
+      </div>
+    </div>
+  </div>`;
+}
+
+/* ---------- Patient detail modal ---------- */
+function modalPatientDetail(){
+  const p = state.patients.find(x => x.id===state.detailPatientId);
+  if(!p) return '';
+  const yes = (arr) => arr.filter(([k])=>p[k]).map(([,l])=>l);
+  const sint = yes([['dorDeCabeca','Dor de cabeça'],['avPerto','AV Perto'],['avLonge','AV Longe'],['tontura','Tontura'],['dorOcular','Dor Ocular'],['fotofobia','Fotofobia']]);
+  const saude = yes([['diabetes','Diabetes'],['hipertensao','Hipertensão'],['labirintite','Labirintite'],['glaucoma','Glaucoma'],['pterigio','Pterígio'],['cirurgiaNosOlhos','Cirurgia nos olhos']]);
+  const fam = yes([['diabetesFamilia','Diabetes família'],['hipertensaoFamilia','Hipertensão família'],['glaucomaFamilia','Glaucoma família']]);
+  const badgesOf = arr => arr.length? arr.map(x=>`<span class="badge b-gold mr-1 mb-1">${esc(x)}</span>`).join('') : `<span class="text-sm text-muted">—</span>`;
+
+  return `
+  <div class="modal-bg" id="modal-detail">
+    <div class="luxury rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
+      <div class="p-5 border-b border-border flex items-start justify-between">
+        <div>
+          <h2 class="font-serif text-2xl gold-gradient">${esc(p.nome)}</h2>
+          <p class="text-sm text-muted mt-1">${esc(p.cpf||'—')} · ${esc(p.telefone||'—')} · ${esc(p.cidade||'—')}</p>
+        </div>
+        <button id="close-detail" class="text-muted hover:text-white text-xl">✕</button>
+      </div>
+      <div class="p-5 overflow-auto scroll space-y-4">
+        <div class="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
+          <div><div class="label">RG</div>${esc(p.rg||'—')}</div>
+          <div><div class="label">Nascimento</div>${esc(p.dataNascimento||'—')}</div>
+          <div><div class="label">Idade</div>${esc(p.idade||'—')}</div>
+          <div class="col-span-2"><div class="label">Endereço</div>${esc(p.endereco||'—')}</div>
+          <div class="col-span-3"><div class="label">Observação</div>${esc(p.observacao||'—')}</div>
+        </div>
+        <hr class="border-border">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div><div class="label text-gold mb-2">Sintomas</div>${badgesOf(sint)}</div>
+          <div><div class="label text-gold mb-2">Histórico Saúde</div>${badgesOf(saude)}</div>
+          <div><div class="label text-gold mb-2">Histórico Familiar</div>${badgesOf(fam)}</div>
+        </div>
+        <hr class="border-border">
+        <div>
+          <div class="label text-gold mb-2">Refração Atual</div>
+          <table class="tbl"><thead><tr><th>Olho</th><th>Esférico</th><th>Cilindro</th><th>Eixo</th></tr></thead>
+            <tbody>
+              <tr><td class="font-medium">OD</td><td>${esc(p.esfAtualOd||'—')}</td><td>${esc(p.cilAtualOd||'—')}</td><td>${esc(p.eixAtualOd||'—')}</td></tr>
+              <tr><td class="font-medium">OE</td><td>${esc(p.esfAtualOe||'—')}</td><td>${esc(p.cilAtualOe||'—')}</td><td>${esc(p.eixAtualOe||'—')}</td></tr>
+            </tbody></table>
+          <div class="text-sm text-muted mt-2">Adição atual: <span class="text-white">${esc(p.addAtual||'—')}</span></div>
+        </div>
+        <div>
+          <div class="label mb-2">Refração Anterior</div>
+          <table class="tbl"><thead><tr><th>Olho</th><th>Esférico</th><th>Cilindro</th><th>Eixo</th></tr></thead>
+            <tbody>
+              <tr><td class="font-medium">OD</td><td>${esc(p.esfOdAnt||'—')}</td><td>${esc(p.cilOdAnt||'—')}</td><td>${esc(p.eixOdAnt||'—')}</td></tr>
+              <tr><td class="font-medium">OE</td><td>${esc(p.esfOeAnt||'—')}</td><td>${esc(p.cilOeAnt||'—')}</td><td>${esc(p.eixOeAnt||'—')}</td></tr>
+            </tbody></table>
+          <div class="text-sm text-muted mt-2">Adição anterior: <span class="text-white">${esc(p.addAnt||'—')}</span></div>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+/* =====================================================================
+   Event attachment per view
+   ===================================================================== */
+function attachViewEvents(){
+  // triagem
+  if(state.view==='triagem'){
+    document.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => { state.triagemTab = b.dataset.tab; render(); });
+    document.querySelectorAll('[data-toggle]').forEach(b => b.onclick = () => { const k=b.dataset.toggle; state.triagemForm[k] = !state.triagemForm[k]; render(); });
+    document.querySelectorAll('#triagem-form [data-field]').forEach(el => el.oninput = () => { state.triagemForm[el.dataset.field] = el.value; if(el.dataset.field==='dataNascimento'){ render(); document.querySelector('[data-field=dataNascimento]')?.focus(); } });
+    document.getElementById('triagem-form').onsubmit = async e => {
+      e.preventDefault();
+      const f = state.triagemForm;
+      if(!f.nome){ toast('Informe o nome', true); return; }
+      try {
+        // dedupe by CPF
+        if(f.cpf){
+          const existing = state.patients.find(x => x.cpf && x.cpf===f.cpf);
+          if(existing){ f.id = existing.id; f.dataCadastro = existing.dataCadastro; }
+        }
+        if(!f.id) f.dataCadastro = new Date().toISOString();
+        const saved = await apiUpsertPatient(f);
+        toast('Paciente salvo na planilha!');
+        state.triagemForm = emptyPatient();
+        state.triagemTab = 'dados';
+        await reloadPatients();
+        state.view = 'pacientes'; render();
+      } catch(err){ toast('Erro: '+err.message, true); }
+    };
+  }
+  // pacientes
+  document.querySelectorAll('[data-open-patient]').forEach(b => b.onclick = () => { state.detailPatientId = b.dataset.openPatient; render(); });
+  document.querySelectorAll('[data-consult-patient]').forEach(b => b.onclick = () => { state.selectedPatientId = b.dataset.consultPatient; state.consultForm=null; state.view='consulta'; render(); });
+  const dashNew = document.getElementById('dash-new'); if(dashNew) dashNew.onclick = () => { state.triagemForm=emptyPatient(); state.view='triagem'; render(); };
+  const closeDet = document.getElementById('close-detail'); if(closeDet) closeDet.onclick = () => { state.detailPatientId=null; render(); };
+
+  // consulta
+  if(state.view==='consulta' && state.consultForm){
+    document.querySelectorAll('#app [data-field]').forEach(el => el.oninput = () => { state.consultForm[el.dataset.field] = el.value; });
+    const back = document.getElementById('back-pacientes'); if(back) back.onclick = () => { state.view='pacientes'; render(); };
+    const gopac = document.getElementById('go-pacientes'); if(gopac) gopac.onclick = () => { state.view='pacientes'; render(); };
+    const saveBtn = document.getElementById('btn-save-consulta');
+    if(saveBtn) saveBtn.onclick = async () => {
+      try {
+        const p = state.consultForm; const orig = p._original||{};
+        // Auto-shift: if any Atual field changed from a non-empty original, move original atual → anterior
+        const atualKeys = ['esfAtualOd','cilAtualOd','eixAtualOd','esfAtualOe','cilAtualOe','eixAtualOe','addAtual'];
+        const antKeys   = ['esfOdAnt','cilOdAnt','eixOdAnt','esfOeAnt','cilOeAnt','eixOeAnt','addAnt'];
+        const changed = atualKeys.some(k => (orig[k]||'') !== (p[k]||'') && (orig[k]||'') !== '');
+        if(changed){
+          atualKeys.forEach((k,i) => { if(orig[k]) p[antKeys[i]] = orig[k]; });
+        }
+        p.status = 'FINALIZADO';
+        const {_original, ...clean} = p;
+        const saved = await apiUpsertPatient(clean);
+        toast('Consulta salva na planilha!');
+        await reloadPatients();
+        state.consultForm = null; state.view='pacientes'; render();
+      } catch(err){ toast('Erro: '+err.message, true); }
+    };
+    const printBtn = document.getElementById('btn-print');
+    if(printBtn) printBtn.onclick = () => printReceita(state.consultForm, state.user);
+  }
+}
+
+/* ---------- Impressão de Receita ---------- */
+function printReceita(p, user){
+  const w = window.open('','_blank','width=800,height=1000');
+  const cell = v => v || '&mdash;';
+  w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Receita — ESSENCIALY</title>
+  <style>body{font-family:Georgia,serif;color:#111;margin:0;padding:40px}
+  .head{border-bottom:2px solid #C8A74E;padding-bottom:16px;display:flex;justify-content:space-between;align-items:end}
+  .brand{letter-spacing:.35em;color:#C8A74E;font-size:22px}
+  .sub{font-size:11px;letter-spacing:.25em;color:#666;text-transform:uppercase}
+  h1{font-size:20px;margin:24px 0 8px}
+  table{width:100%;border-collapse:collapse;margin-top:8px;font-family:Arial,sans-serif}
+  th{background:#111;color:#C8A74E;padding:8px;border:1px solid #ddd;text-align:left;font-size:12px;letter-spacing:.15em;text-transform:uppercase}
+  td{padding:8px;border:1px solid #ddd}
+  .info{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;font-family:Arial,sans-serif;font-size:13px}
+  .sig{margin-top:60px;text-align:center}.sig .line{border-top:1px solid #333;width:60%;margin:0 auto 6px}
+  .foot{margin-top:60px;border-top:1px solid #ddd;padding-top:12px;font-size:12px;color:#555;display:flex;justify-content:space-between}
+  @media print{body{padding:24px}}
+  </style></head><body>
+  <div class="head">
+    <div><div class="brand">ESSENCIALY</div><div class="sub">Clínica de Optometria Premium</div></div>
+    <div style="text-align:right;font-size:12px;color:#555">Data: ${new Date().toLocaleDateString('pt-BR')}<br/>Hora: ${new Date().toLocaleTimeString('pt-BR')}</div>
+  </div>
+  <h1>Receita Optométrica</h1>
+  <div class="info">
+    <div><b>Paciente:</b> ${cell(esc(p.nome))}</div><div><b>CPF:</b> ${cell(esc(p.cpf))}</div>
+    <div><b>Idade:</b> ${cell(esc(p.idade))}</div><div><b>Telefone:</b> ${cell(esc(p.telefone))}</div>
+  </div>
+  <table><thead><tr><th>Olho</th><th>Esférico</th><th>Cilindro</th><th>Eixo</th><th>Adição</th></tr></thead>
+    <tbody>
+      <tr><td style="font-weight:600;color:#C8A74E">O.D.</td><td>${cell(esc(p.esfAtualOd))}</td><td>${cell(esc(p.cilAtualOd))}</td><td>${cell(esc(p.eixAtualOd))}</td><td>${cell(esc(p.addAtual))}</td></tr>
+      <tr><td style="font-weight:600;color:#C8A74E">O.E.</td><td>${cell(esc(p.esfAtualOe))}</td><td>${cell(esc(p.cilAtualOe))}</td><td>${cell(esc(p.eixAtualOe))}</td><td>${cell(esc(p.addAtual))}</td></tr>
+    </tbody></table>
+  <h1>Acuidade Visual</h1>
+  <table><thead><tr><th>Olho</th><th>Longe</th><th>Perto</th></tr></thead>
+    <tbody>
+      <tr><td style="font-weight:600;color:#C8A74E">O.D.</td><td>${cell(esc(p.acuidadeLongeOd))}</td><td>${cell(esc(p.acuidadePertoOd))}</td></tr>
+      <tr><td style="font-weight:600;color:#C8A74E">O.E.</td><td>${cell(esc(p.acuidadeLongeOe))}</td><td>${cell(esc(p.acuidadePertoOe))}</td></tr>
+    </tbody></table>
+  <div class="sig"><div class="line"></div><div>${cell(esc(user?.nome||''))}<br/><span style="font-size:11px;color:#666">Optometrista responsável</span></div></div>
+  <div class="foot"><div>ESSENCIALY · Optometria</div><div>Documento gerado eletronicamente</div></div>
+  </body></html>`);
+  w.document.close(); w.focus(); setTimeout(()=>w.print(),400);
+}
+
+/* =====================================================================
+   INIT
+   ===================================================================== */
+loadLocal();
+render();
+if(state.user && state.token && state.apiUrl){ reloadPatients(); }
+</script>
+</body>
+</html>
