@@ -96,7 +96,7 @@
 
     const state = {
       user: null, token: '', apiUrl: '', view: 'dashboard', patients: [],
-      loading: false, selectedPatientId: null, detailPatientId: null,
+      loading: false, selectedPatientId: null, detailPatientId: null, mobileMenuOpen: false,
       triagemForm: null, triagemTab: 'dados', triagemLookup: '', triagemReturnId: null,
       searchQ: '', consultForm: null, directForm: null, authTab: 'login',
     };
@@ -245,6 +245,12 @@
       if (!j.ok) { if (j.error === 'auth') handleAuthExpired(); throw new Error(j.error || 'Erro ao salvar receita'); }
       return j.recipe;
     }
+
+    async function apiDeletePatient(patientId) {
+      const j = await apiPost({ action: 'deletePatient', token: state.token, patientId });
+      if (!j.ok) { if (j.error === 'auth') handleAuthExpired(); throw new Error(j.error || 'Erro ao excluir paciente'); }
+      return j;
+    }
     
     async function apiRegister(user) {
       const j = await apiPost({ action: 'register', user });
@@ -344,12 +350,22 @@
       `;
     }
 
+    function toggleMobileMenu() {
+      state.mobileMenuOpen = !state.mobileMenuOpen;
+      render();
+    }
+
+    function closeMobileMenu() {
+      if (state.mobileMenuOpen) { state.mobileMenuOpen = false; render(); }
+    }
+
     function viewShell() {
       return `
         <div class="flex h-screen overflow-hidden bg-gray-100">
-          <aside class="w-64 bg-dark text-white flex flex-col hidden md:flex">
-            <div class="p-6 text-center border-b border-gray-800">
+          <aside class="fixed md:static inset-y-0 left-0 z-50 w-72 max-w-[80vw] md:w-64 md:max-w-none bg-dark text-white flex flex-col transform transition-transform duration-300 ease-in-out ${state.mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0">
+            <div class="p-6 flex items-center justify-between border-b border-gray-800">
               <h2 class="text-2xl font-bold text-gold">ESSENCIALY</h2>
+              <button data-close-mobile-menu class="md:hidden text-gray-400 hover:text-white p-1"><i class="ph ph-x text-2xl"></i></button>
             </div>
             <nav class="flex-1 p-4 space-y-2">
               <a href="#" data-nav="dashboard" class="flex items-center gap-3 p-3 rounded-lg transition ${state.view==='dashboard'?'bg-gray-800 text-gold':'hover:bg-gray-800 text-gray-300'}"><i class="ph ph-squares-four text-xl"></i> Dashboard</a>
@@ -364,27 +380,29 @@
             </div>
           </aside>
           
-          <div class="flex-1 flex flex-col w-full h-full">
-            <header class="bg-white shadow-sm h-16 flex items-center justify-between px-6 z-10">
-              <div class="flex items-center md:hidden">
-                 <h2 class="text-xl font-bold text-gold">ESSENCIALY</h2>
+          ${state.mobileMenuOpen ? `<div data-mobile-overlay class="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden"></div>` : ''}
+          
+          <div class="flex-1 flex flex-col w-full h-full min-w-0">
+            <header class="bg-white shadow-sm h-16 flex items-center justify-between px-4 sm:px-6 z-10 shrink-0">
+              <div class="flex items-center gap-3">
+                <button data-open-mobile-menu class="md:hidden text-gray-600 p-1 -ml-1"><i class="ph ph-list text-2xl"></i></button>
+                <h2 class="text-xl font-bold text-gold md:hidden">ESSENCIALY</h2>
+                <div class="hidden md:block font-medium text-gray-600">
+                  Visão: <span class="capitalize text-gold">${state.view.replace(/([A-Z])/g, ' $1').trim()}</span>
+                </div>
               </div>
-              <div class="hidden md:block font-medium text-gray-600">
-                Visão: <span class="capitalize text-gold">${state.view.replace(/([A-Z])/g, ' $1').trim()}</span>
-              </div>
-              <div class="flex items-center gap-4">
+              <div class="flex items-center gap-3 sm:gap-4">
                 <div class="text-sm text-right hidden sm:block">
                   <p class="font-bold text-gray-800">${esc(state.user.nome)}</p>
                   <p class="text-xs text-gray-500">${ROLES[state.user.role]?.label || state.user.role}</p>
                 </div>
-                <div class="w-10 h-10 bg-gold rounded-full flex items-center justify-center text-white font-bold uppercase">
+                <div class="w-10 h-10 shrink-0 bg-gold rounded-full flex items-center justify-center text-white font-bold uppercase">
                   ${esc(state.user.nome.charAt(0))}
                 </div>
-                <button class="md:hidden text-gray-500" onclick="alert('Use modo desktop para melhor experiência')"><i class="ph ph-list text-2xl"></i></button>
               </div>
             </header>
             
-            <main class="flex-1 overflow-y-auto p-6 relative">
+            <main class="flex-1 overflow-y-auto overflow-x-hidden p-3 sm:p-6 relative">
               ${state.loading ? `<div class="absolute inset-0 bg-white bg-opacity-70 flex items-center justify-center z-40"><i class="ph ph-spinner-gap animate-spin text-4xl text-gold"></i></div>` : ''}
               ${renderMainContent()}
             </main>
@@ -403,14 +421,60 @@
       return `<div>View não encontrada</div>`;
     }
 
+    function localTodayISO() {
+      const d = new Date();
+      const tz = d.getTimezoneOffset() * 60000;
+      return new Date(d - tz).toISOString().slice(0, 10);
+    }
+
+    function addOneYearISO(dateStr) {
+      const s = String(dateStr || '').slice(0, 10);
+      const parts = s.split('-');
+      if (parts.length !== 3) return '';
+      const y = parseInt(parts[0], 10);
+      if (!y) return '';
+      return `${y + 1}-${parts[1]}-${parts[2]}`;
+    }
+
     function viewDashboard() {
       const pts = state.patients;
       const triagem = pts.filter(p => p.status === 'AGUARDANDO_TRIAGEM').length;
       const atendimento = pts.filter(p => p.status === 'AGUARDANDO_ATENDIMENTO').length;
       const finalizados = pts.filter(p => p.status === 'FINALIZADO').length;
-      
+
+      const localToday = localTodayISO();
+      const todayMonthDay = localToday.slice(5, 10);
+      const todayYearMonth = localToday.slice(0, 7);
+
+      // Todas as receitas/consultas de todos os pacientes, com referência ao paciente
+      const allRecipes = pts.flatMap(p =>
+        (Array.isArray(p.receitas) ? p.receitas : []).map(r => ({ ...r, _patientNome: p.nome, _patientId: p.id }))
+      );
+
+      // Aniversariantes do dia (usa a data de nascimento do paciente)
+      const aniversariantes = pts.filter(p => p.dataNascimento && String(p.dataNascimento).slice(5, 10) === todayMonthDay);
+
+      // Consultas realizadas hoje / no mês (com base na data do exame de cada receita)
+      const consultasHoje = allRecipes.filter(r => String(r.dataExame || '').slice(0, 10) === localToday);
+      const consultasMes = allRecipes.filter(r => String(r.dataExame || '').slice(0, 7) === todayYearMonth);
+
+      // Receitas vencendo hoje: paciente cuja última consulta completou exatamente 1 ano hoje
+      const receitasVencendo = pts.filter(p => {
+        const latest = Array.isArray(p.receitas) && p.receitas.length > 0
+          ? [...p.receitas].sort((a, b) => String(b.dataExame || '').localeCompare(String(a.dataExame || '')))[0]
+          : null;
+        const lastExamDate = latest?.dataExame || p.dataExame || '';
+        if (!lastExamDate) return false;
+        return addOneYearISO(lastExamDate) === localToday;
+      }).map(p => {
+        const latest = Array.isArray(p.receitas) && p.receitas.length > 0
+          ? [...p.receitas].sort((a, b) => String(b.dataExame || '').localeCompare(String(a.dataExame || '')))[0]
+          : null;
+        return { patient: p, lastExamDate: latest?.dataExame || p.dataExame || '' };
+      });
+
       return `
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
           <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center gap-4">
             <div class="p-3 bg-blue-100 text-blue-600 rounded-lg"><i class="ph ph-users text-2xl"></i></div>
             <div><p class="text-sm text-gray-500">Total de Pacientes</p><p class="text-2xl font-bold">${pts.length}</p></div>
@@ -426,6 +490,56 @@
           <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center gap-4">
             <div class="p-3 bg-emerald-100 text-emerald-600 rounded-lg"><i class="ph ph-check-circle text-2xl"></i></div>
             <div><p class="text-sm text-gray-500">Finalizados</p><p class="text-2xl font-bold">${finalizados}</p></div>
+          </div>
+          <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center gap-4">
+            <div class="p-3 bg-rose-100 text-rose-600 rounded-lg"><i class="ph ph-calendar-check text-2xl"></i></div>
+            <div><p class="text-sm text-gray-500">Consultas Hoje</p><p class="text-2xl font-bold">${consultasHoje.length}</p></div>
+          </div>
+          <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center gap-4">
+            <div class="p-3 bg-purple-100 text-purple-600 rounded-lg"><i class="ph ph-calendar-blank text-2xl"></i></div>
+            <div><p class="text-sm text-gray-500">Consultas no Mês</p><p class="text-2xl font-bold">${consultasMes.length}</p></div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+            <div class="flex justify-between items-center mb-4">
+              <h3 class="font-bold text-lg flex items-center gap-2"><i class="ph ph-cake text-pink-500"></i> Aniversariantes do Dia</h3>
+            </div>
+            ${aniversariantes.length === 0 ?
+              `<p class="text-gray-500 text-center py-4">Nenhum aniversariante hoje.</p>` :
+              `<div class="space-y-3">
+                ${aniversariantes.map(p => `
+                  <div class="flex items-center justify-between p-3 border border-gray-100 rounded-lg hover:bg-gray-50 transition">
+                    <div>
+                      <p class="font-semibold text-gray-800">${esc(p.nome)}</p>
+                      <p class="text-xs text-gray-500">Nasceu em ${formatDateBr(p.dataNascimento)} ${p.idade ? `| Completa ${parseInt(p.idade, 10) + (String(p.dataNascimento).slice(0,4) === String(localToday).slice(0,4) ? 0 : 1)} anos` : ''}</p>
+                    </div>
+                    <span class="badge bg-pink-100 text-pink-700"><i class="ph ph-gift"></i> Hoje</span>
+                  </div>
+                `).join('')}
+              </div>`
+            }
+          </div>
+
+          <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+            <div class="flex justify-between items-center mb-4">
+              <h3 class="font-bold text-lg flex items-center gap-2"><i class="ph ph-warning-circle text-red-500"></i> Receitas Vencendo Hoje</h3>
+            </div>
+            ${receitasVencendo.length === 0 ?
+              `<p class="text-gray-500 text-center py-4">Nenhuma receita completando 1 ano hoje.</p>` :
+              `<div class="space-y-3">
+                ${receitasVencendo.map(({ patient: p, lastExamDate }) => `
+                  <div class="flex items-center justify-between p-3 border border-gray-100 rounded-lg hover:bg-gray-50 transition">
+                    <div>
+                      <p class="font-semibold text-gray-800">${esc(p.nome)}</p>
+                      <p class="text-xs text-gray-500">Última consulta em ${formatDateBr(lastExamDate)} | Completa 1 ano hoje</p>
+                    </div>
+                    <button data-consult-patient="${p.id}" class="bg-gold text-white p-2 rounded hover:bg-yellow-600 tooltip" title="Iniciar Nova Consulta"><i class="ph ph-stethoscope"></i></button>
+                  </div>
+                `).join('')}
+              </div>`
+            }
           </div>
         </div>
         
@@ -506,6 +620,7 @@
                     <td class="p-3 text-right space-x-1">
                       <button data-open-patient="${p.id}" class="p-1.5 text-blue-600 bg-blue-50 rounded hover:bg-blue-100 tooltip" title="Ver Detalhes"><i class="ph ph-eye text-lg"></i></button>
                       <button data-consult-patient="${p.id}" class="p-1.5 text-gold bg-amber-50 rounded hover:bg-amber-100 tooltip" title="Nova Consulta"><i class="ph ph-stethoscope text-lg"></i></button>
+                      ${state.user?.role === 'ADMIN' ? `<button data-delete-patient="${p.id}" data-delete-patient-nome="${esc(p.nome)}" class="p-1.5 text-red-600 bg-red-50 rounded hover:bg-red-100 tooltip" title="Excluir Paciente"><i class="ph ph-trash text-lg"></i></button>` : ''}
                     </td>
                   </tr>
                 `).join('')}
@@ -963,8 +1078,17 @@
         state.user = null; state.token = ''; saveLocal(); state.view = 'dashboard'; render();
       };
       document.querySelectorAll('[data-nav]').forEach(el => {
-        el.onclick = (e) => { e.preventDefault(); state.view = el.dataset.nav; render(); };
+        el.onclick = (e) => { e.preventDefault(); state.view = el.dataset.nav; state.mobileMenuOpen = false; render(); };
       });
+
+      const btnOpenMenu = document.querySelector('[data-open-mobile-menu]');
+      if (btnOpenMenu) btnOpenMenu.onclick = toggleMobileMenu;
+
+      const btnCloseMenu = document.querySelector('[data-close-mobile-menu]');
+      if (btnCloseMenu) btnCloseMenu.onclick = closeMobileMenu;
+
+      const overlay = document.querySelector('[data-mobile-overlay]');
+      if (overlay) overlay.onclick = closeMobileMenu;
       
       const searchInput = document.getElementById('search-patients');
       if (searchInput) {
@@ -1184,6 +1308,19 @@
       
       document.querySelectorAll('[data-open-patient]').forEach(b => b.onclick = () => { state.detailPatientId = b.dataset.openPatient; render(); });
       document.querySelectorAll('[data-consult-patient]').forEach(b => b.onclick = () => { state.selectedPatientId = b.dataset.consultPatient; state.consultForm = null; state.view = 'consulta'; render(); });
+      document.querySelectorAll('[data-delete-patient]').forEach(b => b.onclick = async () => {
+        const id = b.dataset.deletePatient;
+        const nome = b.dataset.deletePatientNome || 'este paciente';
+        if (!confirm(`Tem certeza que deseja excluir ${nome}?\n\nEsta ação vai apagar o cadastro e TODO o histórico de receitas dele. Não pode ser desfeita.`)) return;
+        try {
+          await apiDeletePatient(id);
+          toast('Paciente excluído com sucesso!');
+          if (state.detailPatientId === id) state.detailPatientId = null;
+          if (state.selectedPatientId === id) state.selectedPatientId = null;
+          await reloadPatients();
+          render();
+        } catch (err) { toast('Erro: ' + err.message, true); }
+      });
     }
 
     // ----- INICIALIZAÇÃO -----
