@@ -214,10 +214,32 @@
     }
 
     // ----- API FETCHES -----
+    async function _parseApiResponse(r) {
+      const text = await r.text();
+      try {
+        return JSON.parse(text);
+      } catch (e) {
+        if (/^\s*<(!doctype|html)/i.test(text)) {
+          throw new Error(
+            'A planilha respondeu com uma página HTML em vez de dados (status ' + r.status + '). ' +
+            'Isso costuma acontecer quando a implantação do Apps Script não está com acesso "Qualquer pessoa", ' +
+            'ou o celular não está na mesma conta/sessão Google usada para autorizar o app. ' +
+            'Verifique em Implantar > Gerenciar implantações, no editor do Apps Script.'
+          );
+        }
+        throw new Error('Resposta inesperada do servidor: ' + text.slice(0, 150));
+      }
+    }
+
     async function apiPost(payload) {
       if (!state.apiUrl) throw new Error('URL da API não configurada');
-      const r = await fetch(state.apiUrl, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(payload) });
-      return await r.json();
+      let r;
+      try {
+        r = await fetch(state.apiUrl, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(payload) });
+      } catch (networkErr) {
+        throw new Error('Falha de conexão com a planilha. Verifique sua internet e tente novamente.');
+      }
+      return await _parseApiResponse(r);
     }
     
     function handleAuthExpired() {
@@ -228,8 +250,13 @@
 
     async function apiGetPatients() {
       if (!state.apiUrl) return [];
-      const r = await fetch(state.apiUrl + '?token=' + encodeURIComponent(state.token), { method: 'GET' });
-      const j = await r.json();
+      let r;
+      try {
+        r = await fetch(state.apiUrl + '?token=' + encodeURIComponent(state.token), { method: 'GET' });
+      } catch (networkErr) {
+        throw new Error('Falha de conexão com a planilha. Verifique sua internet e tente novamente.');
+      }
+      const j = await _parseApiResponse(r);
       if (!j.ok) { if (j.error === 'auth') handleAuthExpired(); throw new Error(j.error || 'Erro ao buscar'); }
       return (j.patients || []).map(normalizeFromSheet);
     }
@@ -1039,10 +1066,25 @@
     // ----- EVENTS & LIFECYCLE -----
     function attachSetupEvents() {
       const btn = document.getElementById('save-api');
-      if (btn) btn.onclick = () => {
+      if (btn) btn.onclick = async () => {
         const v = document.getElementById('api-url').value.trim();
         if (!v || !v.includes('/exec')) { toast('URL inválida — precisa terminar em /exec', true); return; }
-        state.apiUrl = v; saveLocal(); toast('Planilha conectada!'); render();
+
+        btn.disabled = true;
+        btn.textContent = 'Testando conexão...';
+        try {
+          const r = await fetch(v + '?token=teste', { method: 'GET' });
+          const j = await _parseApiResponse(r);
+          // Qualquer resposta JSON válida (mesmo { ok:false, error:'auth' }) confirma que a implantação está acessível.
+          if (typeof j.ok === 'undefined') {
+            throw new Error('A URL respondeu, mas não parece ser a API do ESSENCIALY.');
+          }
+          state.apiUrl = v; saveLocal(); toast('Planilha conectada!'); render();
+        } catch (err) {
+          toast(err.message, true);
+          btn.disabled = false;
+          btn.textContent = 'Conectar';
+        }
       };
     }
 
