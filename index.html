@@ -214,32 +214,46 @@
     }
 
     // ----- API FETCHES -----
-    async function _parseApiResponse(r) {
-      const text = await r.text();
-      try {
-        return JSON.parse(text);
-      } catch (e) {
-        if (/^\s*<(!doctype|html)/i.test(text)) {
-          throw new Error(
-            'A planilha respondeu com uma página HTML em vez de dados (status ' + r.status + '). ' +
-            'Isso costuma acontecer quando a implantação do Apps Script não está com acesso "Qualquer pessoa", ' +
-            'ou o celular não está na mesma conta/sessão Google usada para autorizar o app. ' +
-            'Verifique em Implantar > Gerenciar implantações, no editor do Apps Script.'
-          );
+    function _wait(ms) { return new Promise(res => setTimeout(res, ms)); }
+
+    // Faz fetch + parse de JSON com retentativas automáticas.
+    // O Apps Script às vezes "acorda" devagar (cold start) e, logo após o login,
+    // a primeira requisição seguinte pode voltar com uma página HTML temporária
+    // em vez do JSON — por isso tentamos de novo antes de mostrar erro ao usuário.
+    async function _fetchJsonWithRetry(url, options, retries) {
+      if (retries === undefined) retries = 2;
+
+      for (let attempt = 0; attempt <= retries; attempt++) {
+        let text;
+
+        try {
+          const r = await fetch(url, options);
+          text = await r.text();
+        } catch (networkErr) {
+          if (attempt < retries) { await _wait(700 * (attempt + 1)); continue; }
+          throw new Error('Falha de conexão com a planilha. Verifique sua internet e tente novamente.');
         }
-        throw new Error('Resposta inesperada do servidor: ' + text.slice(0, 150));
+
+        try {
+          return JSON.parse(text);
+        } catch (parseErr) {
+          if (attempt < retries) { await _wait(700 * (attempt + 1)); continue; }
+
+          if (/^\s*<(!doctype|html)/i.test(text)) {
+            throw new Error(
+              'A planilha (Google Apps Script) demorou para responder e não retornou os dados a tempo. ' +
+              'Isso costuma acontecer quando ela estava "dormindo" (sem uso recente). Toque em Atualizar e tente de novo.'
+            );
+          }
+
+          throw new Error('Resposta inesperada do servidor: ' + text.slice(0, 150));
+        }
       }
     }
 
     async function apiPost(payload) {
       if (!state.apiUrl) throw new Error('URL da API não configurada');
-      let r;
-      try {
-        r = await fetch(state.apiUrl, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(payload) });
-      } catch (networkErr) {
-        throw new Error('Falha de conexão com a planilha. Verifique sua internet e tente novamente.');
-      }
-      return await _parseApiResponse(r);
+      return await _fetchJsonWithRetry(state.apiUrl, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(payload) });
     }
     
     function handleAuthExpired() {
@@ -250,13 +264,7 @@
 
     async function apiGetPatients() {
       if (!state.apiUrl) return [];
-      let r;
-      try {
-        r = await fetch(state.apiUrl + '?token=' + encodeURIComponent(state.token), { method: 'GET' });
-      } catch (networkErr) {
-        throw new Error('Falha de conexão com a planilha. Verifique sua internet e tente novamente.');
-      }
-      const j = await _parseApiResponse(r);
+      const j = await _fetchJsonWithRetry(state.apiUrl + '?token=' + encodeURIComponent(state.token), { method: 'GET' });
       if (!j.ok) { if (j.error === 'auth') handleAuthExpired(); throw new Error(j.error || 'Erro ao buscar'); }
       return (j.patients || []).map(normalizeFromSheet);
     }
@@ -1073,8 +1081,7 @@
         btn.disabled = true;
         btn.textContent = 'Testando conexão...';
         try {
-          const r = await fetch(v + '?token=teste', { method: 'GET' });
-          const j = await _parseApiResponse(r);
+          const j = await _fetchJsonWithRetry(v + '?token=teste', { method: 'GET' });
           // Qualquer resposta JSON válida (mesmo { ok:false, error:'auth' }) confirma que a implantação está acessível.
           if (typeof j.ok === 'undefined') {
             throw new Error('A URL respondeu, mas não parece ser a API do ESSENCIALY.');
